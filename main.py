@@ -2,6 +2,7 @@
 
 import numpy as np
 import tensorflow as tf
+import xml.etree.ElementTree as ET
 import os, sys
 
 flags = tf.flags
@@ -10,6 +11,18 @@ logging = tf.logging
 flags.DEFINE_string("data_path", '/home/spark/data/ILSVRC2015/ILSVRC2015',
                     "Where the training/test/val data is stored.")
 FLAGS = flags.FLAGS
+
+def read_anno_from_file(filename):
+  tree = ET.parse(filename)
+  size = tree.getroot().find('size')
+  width = np.float32(size.find('width').text)
+  height = np.float32(size.find('height').text)
+  bndbox = tree.getroot().find('object').find('bndbox')
+  xmax = np.float32(bndbox.find('xmax').text)
+  xmin = np.float32(bndbox.find('xmin').text)
+  ymax = np.float32(bndbox.find('ymax').text)
+  ymin = np.float32(bndbox.find('ymin').text)
+  return np.array([width,height,xmax,xmin,ymax,ymin])
 
 def main(_):
   print tf.gfile.Exists(FLAGS.data_path)
@@ -25,6 +38,9 @@ def main(_):
   record_defaults = [['/path/prefix/to/record'],[1]]
   ImageSets_train_prefix, _ = tf.decode_csv(
     value, record_defaults=record_defaults, field_delim=' ')
+  Annotations_train_filename = tf.string_join(
+    [FLAGS.data_path,'Annotations','VID','train',ImageSets_train_prefix,'000000.xml'], separator='/')
+  Annotations_train = tf.py_func(read_anno_from_file, [Annotations_train_filename], tf.float32)
 
   with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -35,8 +51,8 @@ def main(_):
 
     for i in range(120):
       # Retrieve a single instance:
-      prefix = sess.run(ImageSets_train_prefix)
-      print i, prefix
+      anno = sess.run(Annotations_train)
+      print i, anno
 
     coord.request_stop()
     coord.join(threads)
