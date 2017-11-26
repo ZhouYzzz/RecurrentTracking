@@ -51,8 +51,8 @@ def main(_):
 
     for i in range(120):
       # Retrieve a single instance:
-      anno = sess.run(Annotations_train)
-      print i, anno
+      filename, anno = sess.run([Annotations_train_filename, Annotations_train])
+      print i, filename, anno
 
     coord.request_stop()
     coord.join(threads)
