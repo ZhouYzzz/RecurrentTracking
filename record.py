@@ -84,7 +84,6 @@ class SequenceParser:
             for o in objects:
                 trackid, bndbox, occluded, generated = _parse_object(o)
                 self._register(trackid, [frame], bndbox, occluded, generated)
-        # finish parsing
         return self._construct_sequence_examples()
 
     def _construct_sequence_examples(self):
@@ -109,8 +108,6 @@ class SequenceParser:
 def construct_tracks_from_sequence(sequence):
     def _construct_tracks(sequence):
         sequence_examples = SequenceParser(sequence).parse()
-        #example = tf.train.Example(features=tf.train.Features(feature={
-        #    'track_name': _bytes_feature(sequence)}))
         return np.array(sequence_examples)
     #sequence = tf.Print(sequence,[sequence])
     tracks_queue = tf.FIFOQueue(capacity=32, dtypes=tf.string)
@@ -134,10 +131,6 @@ def main(_):
         threads = tf.train.start_queue_runners(coord=coord)
         for i in xrange(30):
             value = sess.run(track)
-            #example = tf.train.Example(features=tf.train.Features(feature={
-            #    'track_name': _bytes_feature(value)
-            #    }))
-            #record_writer.write(example.SerializeToString())
             record_writer.write(value)
         coord.request_stop()
         coord.join(threads)
@@ -148,16 +141,6 @@ def main(_):
     record_reader = tf.TFRecordReader()
     record_queue = tf.train.string_input_producer([FLAGS.record_file])
     key, value = record_reader.read(record_queue)
-    # context = tf.train.Features(feature={
-    #     'sequence': _bytes_feature(self._sequence),
-    #     'length': _int64_feature([len(self._dicts[0][trackid])])
-    #     })
-    # feature_lists = tf.train.FeatureLists(feature_list={
-    #     'frame': _int64_feature_list(self._dicts[0][trackid]),
-    #     'bndbox': _int64_feature_list(self._dicts[1][trackid]),
-    #     'occluded': _int64_feature_list(self._dicts[2][trackid]),
-    #     'generated': _int64_feature_list(self._dicts[3][trackid])
-    #     })
     context, sequence_example = tf.parse_single_sequence_example(
             value,
             context_features={
