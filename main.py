@@ -8,7 +8,7 @@ import os, sys
 flags = tf.flags
 logging = tf.logging
 
-flags.DEFINE_string("data_path", '/home/spark/data/ILSVRC2015/ILSVRC2015',
+flags.DEFINE_string("data_path", '../ILSVRC2015',
                     "Where the training/test/val data is stored.")
 FLAGS = flags.FLAGS
 
@@ -61,7 +61,7 @@ def main(_):
   image = tf.image.decode_jpeg(image_file)
   image = tf.image.convert_image_dtype(image, tf.float32)
 
-  image = tf.Print(image, [ImageSets_train_filename_queue.size(), Annotations_train_filename_queue.size(), Images_train_filename_queue.size()])
+  #image = tf.Print(image, [ImageSets_train_filename_queue.size(), Annotations_train_filename_queue.size(), Images_train_filename_queue.size()])
 
   frame_queue = tf.FIFOQueue(1000, dtypes=[Bbox_train.dtype, image.dtype])
 
