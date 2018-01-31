@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 from parsexml import parsexml
 
 flags = tf.flags
-flags.DEFINE_string("data_path", '/home/spark/data/ILSVRC2015/ILSVRC2015',
+flags.DEFINE_string("data_path", '../ILSVRC2015',
         "Where the training/test/val data is stored.")
 FLAGS = flags.FLAGS
 
