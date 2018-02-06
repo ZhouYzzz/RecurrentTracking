@@ -25,9 +25,9 @@ class Snippet(object):
   def length(self):
     return len(self._frames)
 
-  @property
-  def current_frame(self):
-    return self._frames[-1]
+  # @property
+  # def current_frame(self):
+    # return self._frames[-1]
 
   def subsnippet(self, length=32):
     _length = min(self.length, length)
@@ -76,7 +76,7 @@ class SnippetRegister(object):
       # track existing object
       self._ongoing_snippets[trackid].append(frame, bndbox)
 
-    for trackid in self._ongoing_snippets:
+    for trackid in self._ongoing_snippets.keys():
       if trackid not in present_trackids:
         # close ended object sequence
         self._ended_snippets.append(self._ongoing_snippets.pop(trackid))
@@ -92,12 +92,13 @@ def parse_snippet_annotations(snippet_anno_dir):
   snippet_length = len(anno_filenames)
   meta = parse_annotation_file(os.path.join(snippet_anno_dir, '000000.xml'))
   register = SnippetRegister()
-  register.register(0, meta['object'])
+  register.register([0], meta['object'])
   for i in range(1, snippet_length):
     anno = parse_annotation_file(os.path.join(snippet_anno_dir, '{:06d}.xml'.format(i)))
-    register.register(i, anno['object'])
+    register.register([i], anno['object'])
   snippets = register.close()
   return {'snippet_id': meta['folder'],
+          'snippet_length': snippet_length,
           'subsnippets': map(lambda s: s.todict(), snippets)}
 
 
