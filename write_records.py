@@ -44,6 +44,7 @@ def _parse_snippet(data_path, snippet_id, phase='train'):
   logging.info('parse snippet {}'.format(snippet_id))
   snippet_anno_dir = os.path.join(data_path, 'Annotations', TASK, phase, snippet_id)
   results = parse_snippet_annotations(snippet_anno_dir=snippet_anno_dir)
+  # _bytes_feature(results['snippet_id'])
   serialized_examples = []
   for s in results['subsnippets']:
     context = tf.train.Features(feature={

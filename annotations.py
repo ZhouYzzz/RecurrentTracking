@@ -65,7 +65,7 @@ class SnippetRegister(object):
     self._ended_snippets = list()
 
   def register(self, frame, shots):
-    present_trackids = [shot['trackid'] for shot in shots]
+    present_trackids = [shot['trackid'] for shot in shots.iter()]
     for shot in shots:
       trackid = shot['trackid']
       bndbox = shot['bndbox']
@@ -103,10 +103,10 @@ def parse_snippet_annotations(snippet_anno_dir):
 
 
 def parse_annotation_file(filename):
-  return parse_annotation(parse(filename))
+  return parse_annotation_tree(parse(filename))
 
 
-def parse_annotation(tree):
+def parse_annotation_tree(tree):
   """
   Parse the annotation tree for ILSVRC2015 VID challenge
   @param tree An ElementTree instance
@@ -132,12 +132,12 @@ def parse_annotation(tree):
   return {'folder': _folder.text,
           'filename': _filename.text,
           'size': {'width': int(_size[0].text), 'height': int(_size[1].text)},
-          'object': map(parse_object, _object)}
+          'object': list(map(parse_object, _object))}
 
 
 def main():
   annos = parse_snippet_annotations(snippet_anno_dir='Annotations/VID/train/ILSVRC2015_VID_train_0000/ILSVRC2015_train_00008008')
-  print(annos)
+  print(annos['subsnippets'])
 
 if __name__ == '__main__':
   main()

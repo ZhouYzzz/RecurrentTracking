@@ -1,5 +1,48 @@
 from typing import Any, Dict, List
 
+class Shot(object):
+  def __init__(self, trackid:str, frame:int, bndbox:List[int]):
+    self._trackid = trackid
+    self._frame = frame
+    self._bndbox = bndbox
+  @property
+  def trackid(self):
+    return self._trackid
+  @property
+  def frame(self):
+    return self._frame
+  @property
+  def bndbox(self):
+    return self._bndbox
+  @staticmethod
+  def from_anno_dicts(ds: List[Dict], frame: int):
+    return [Shot(trackid=d['trackid'], frame=frame, bndbox=d['bndbox']) for d in ds]
+
+class SnippetRegister(object):
+  def __init__(self):
+    self._ongoing_snippets = dict() # type: Dict[Snippet]
+    self._ended_snippets = list()
+
+  def register(self, shots: List[Shot]):
+    present_trackids = [shot.trackid for shot in shots]
+    for shot in shots:
+      if shot.trackid not in self._ongoing_snippets.keys():
+        # register new snippet when first appears
+        self._ongoing_snippets[shot.trackid] = Snippet()
+      
+      self._ongoing_snippets[shot.trackid].append(frame=shot.frame, bndbox=shot.bndbox)
+    
+    for trackid in list(self._ongoing_snippets.keys()):
+      if trackid not in present_trackids:
+        # close ended snippet
+        self._ended_snippets.append(self._ongoing_snippets.pop(trackid))
+      
+  def close(self):
+    for trackid in list(self._ongoing_snippets.keys()):
+      self._ended_snippets.append(self._ongoing_snippets.pop(trackid))
+    return self._ended_snippets
+
+
 class Snippet(object):
   """
   `Snippet` is a container to store sequential data.

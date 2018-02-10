@@ -40,8 +40,8 @@ def main(_):
     sess.run(tf.local_variables_initializer())
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
-    for i in xrange(10):
-      print sess.run([context['snippet_length'], sequence_example])
+    for i in range(10):
+      print(sess.run([context['snippet_length'], sequence_example]))
     coord.request_stop()
     coord.join(threads)
 
