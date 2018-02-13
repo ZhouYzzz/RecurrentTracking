@@ -84,7 +84,7 @@ def create_tfrecords(snippet_list_file: str):
       # for each snippet id, get all the snippets it contains
       meta, snippets = parse_snippet(datapath=FLAGS.data_dir, snippet_id=snippet_id, phase=FLAGS.phase)
       # split each snippet to fixed length subsnippets
-      subsnippets = []
+      subsnippets = [] # type: List[Snippet]
       for s in snippets:
         subsnippets += split_snippets(s, 32)
       examples = list(map(lambda s: snippet2example(meta, s), subsnippets))
