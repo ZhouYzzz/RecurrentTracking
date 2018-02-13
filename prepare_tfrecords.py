@@ -38,8 +38,38 @@ def parse_snippet(datapath: str, snippet_id: str, phase: str = 'train'):
     shots = Shot.from_anno_dicts(anno['object'], frame=i)
     register.register(shots)
   snippets = register.close()
-  print('{},{}'.format(len(list(meta['object'])), len(snippets)))
-  return snippets
+  # print('{},{}'.format(len(list(meta['object'])), len(snippets)))
+  return meta, snippets
+
+
+# def parse_annotation_tree(tree):
+#     return {'trackid': _trackid.text,
+#             'name': _name.text,
+#             'bndbox': [int(e.text) for e in _bndbox[0:4]], # xmax, xmin, ymax, ymin
+#             'occluded': int(_occluded.text),
+#             'generated': int(_generated.text)}
+#   return {'folder': _folder.text,
+#           'filename': _filename.text,
+#           'size': {'width': int(_size[0].text), 'height': int(_size[1].text)},
+#           'object': list(map(parse_object, _object))}
+def snippet2example(meta, s: Snippet):
+  context = tf.train.Features(feature={
+    'id': feature_bytes(meta['folder']),
+    'width': feature_int64(meta['size']['width']),
+    'height': feature_int64(meta['size']['height']),
+    'length': feature_int64(32)
+  })
+  feature_lists = tf.train.FeatureLists(feature_list={
+    'frame': feature_list_int64(s.entities['frame']),
+    'bndbox': feature_list_int64(s.entities['bndbox'])
+  })
+  sequence_example = tf.train.SequenceExample(context=context, feature_lists=feature_lists)
+  return sequence_example
+
+def split_snippets(s: Snippet, l: int):
+  length = s.length
+  n = max(length // l, 1) # at least 1
+  return s.split(n, l)
 
 def create_tfrecords(snippet_list_file: str):
   body, _ = os.path.basename(snippet_list_file).split(sep='.')
@@ -47,12 +77,20 @@ def create_tfrecords(snippet_list_file: str):
   logging.info('W2:{}'.format(record_path))
   if os.path.exists(record_path):
     logging.info('PASS')
-    # return
+    return
   writer = tf.python_io.TFRecordWriter(record_path)
   with open(snippet_list_file, 'r') as csvfile:
     for snippet_id, _ in csv.reader(csvfile, delimiter=' '):
-      parse_snippet(datapath=FLAGS.data_dir, snippet_id=snippet_id, phase=FLAGS.phase)
-      logging.info('\t{}'.format(snippet_id))
+      # for each snippet id, get all the snippets it contains
+      meta, snippets = parse_snippet(datapath=FLAGS.data_dir, snippet_id=snippet_id, phase=FLAGS.phase)
+      # split each snippet to fixed length subsnippets
+      subsnippets = []
+      for s in snippets:
+        subsnippets += split_snippets(s, 32)
+      examples = list(map(lambda s: snippet2example(meta, s), subsnippets))
+      for e in examples:
+        writer.write(e.SerializeToString())
+      logging.info('\t{}, {}'.format(snippet_id, len(subsnippets)))
   writer.close()
 
 def main(_):
@@ -60,6 +98,8 @@ def main(_):
     raise NotADirectoryError(FLAGS.data_dir)
   snippet_list_files = get_snippet_list_files(data_path=FLAGS.data_dir, phase=FLAGS.phase)
   for f in snippet_list_files[:1]:
+    # for each snippet list file, e.g. train_01.txt
+    # create corresponding tfrecords file train_01.tfrecords
     create_tfrecords(f)
 
   # sess = tf.Session()

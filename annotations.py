@@ -103,6 +103,9 @@ def parse_snippet_annotations(snippet_anno_dir):
 
 
 def parse_annotation_file(filename):
+  """
+  Parse an ILSVRC2015 VID annotation file to a parsed dict
+  """
   return parse_annotation_tree(parse(filename))
 
 
