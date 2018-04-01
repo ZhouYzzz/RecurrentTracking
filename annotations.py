@@ -1,30 +1,50 @@
-from xml.etree.ElementTree import parse
+from xml.etree.ElementTree import parse, Element
 from collections import namedtuple
-from features import feature_int64
+from typing import List
 
 
-class AnnoMeta(namedtuple('AnnoMeta', ['folder', 'filename', 'size', 'object'])):
+class AnnoMeta(namedtuple('AnnoMeta', ['folder', 'filename', 'size'])):
   pass
 
-class AnnoObjc(namedtuple('AnnoObjc', ['trackid', 'name', 'bndbox', 'occluded', 'generated'])):
+
+class AnnoObj(namedtuple('AnnoObjc', ['trackid', 'name', 'bndbox', 'occluded', 'generated'])):
   pass
-  # def as_identified_dict(self):
-  #   return {self.trackid: self}
 
 
-def parse_objc(elem):
-  return AnnoObjc(trackid=bytes(elem[0].text, 'utf-8'),
-                  name=bytes(elem[1].text, 'utf-8'),
-                  bndbox=[int(e.text) for e in elem[2][0:4]],
-                  occluded=int(elem[3].text),
-                  generated=int(elem[4].text))
+class AnnoStream(namedtuple('AnnoStream', ['meta', 'frames', 'bndboxes'])):
+  @staticmethod
+  def objcs2stream(meta: AnnoMeta, seq_of_objc: List[AnnoObj]):
+    raise NotImplementedError
 
 
-def parse_meta(elem):
-  return AnnoMeta(folder=bytes(elem[0].text, 'utf-8'),
-                  filename=bytes(elem[1].text, 'utf-8'),
-                  size=[int(elem[3][0].text), int(elem[3][1].text)],
-                  object=list(map(parse_objc, elem[4::])))
+def parse_obj(elem: Element):
+  """Parse from raw xml Element (tagged object) to `AnnoObjc`"""
+  return AnnoObj(trackid=bytes(elem[0].text, 'utf-8'),
+                 name=bytes(elem[1].text, 'utf-8'),
+                 bndbox=[int(e.text) for e in elem[2][0:4]],
+                 occluded=int(elem[3].text),
+                 generated=int(elem[4].text))
+
+
+def parse_meta(root: Element):
+  """Parse from root, return the meta information"""
+  return AnnoMeta(folder=bytes(root[0].text, 'utf-8'),
+                  filename=bytes(root[1].text, 'utf-8'),
+                  size=[int(root[3][0].text), int(root[3][1].text)])
+
+
+def parse_objs(root: Element):
+  """Parse from root, return list of objects"""
+  return list(map(parse_obj, root[4::]))  # type: List[AnnoObj]
+
+
+def parse_anno(root: Element):
+  """Parse from root, return all parsed elements
+
+  Returns:
+    A Tuple of (AnnoMeta, List[AnnoObj])
+  """
+  return parse_meta(root), parse_objs(root)
 
 
 class StreamSeperator(object):
@@ -34,7 +54,11 @@ class StreamSeperator(object):
     self._inactive_stream = list()
 
   def update(self, identified_dict):
-    """d: dict of object {identity: dtype}"""
+    """identified_dict: dict of object {identity: dtype}
+
+    Example: for a dict representing an object `obj`, which is identified with obj['id'],
+             StreamSeperator.update({obj['id']: obj for obj in object_list})
+    """
     present_ids = identified_dict.keys()
     active_ids = self._active_stream.keys()
     for i in list(present_ids - active_ids):
@@ -52,33 +76,7 @@ class StreamSeperator(object):
 
 
 def main():
-    # tree = parse('../annos/000000.xml')
-    tree = parse('/Users/zhouyz/Development/ILSVRC2015/Annotations/VID/train/ILSVRC2015_VID_train_0000/ILSVRC2015_train_00008008/000000.xml')
-    root = tree.getroot()
-    root[4]
-    # print(root[4])
-    meta = parse_meta(root)
-    ss = StreamSeperator(AnnoObjc)
-
-    for i in range(50):
-      tree = parse('/Users/zhouyz/Development/ILSVRC2015/Annotations/VID/train/ILSVRC2015_VID_train_0000/ILSVRC2015_train_00008008/{:06d}.xml'.format(i))
-      root = tree.getroot()
-      meta = parse_meta(root)
-      ss.update({o.trackid: o for o in meta.object})
-    # ss.update({o.trackid: o for o in meta.object})
-    
-    streams = ss.close()
-    for s in streams:
-      print(len(s))
-    # print(meta.object[0].as_identified_dict())
-    return
-    print(meta)
-    f = feature_int64(meta.size)
-    print(f)
-    for i in meta:
-      print(i)
-    # print(parse_objc(root[4]))
-    # import os
+  pass
 
 
 if __name__ == '__main__':
