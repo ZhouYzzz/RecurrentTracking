@@ -1,8 +1,6 @@
 import os, glob, csv
 from annotations import parse_annotation_folder
 
-ROOT_DIR = os.path.join(os.path.expanduser('~'), 'ILSVRC2015')
-
 
 class PHASE:
   TRAIN = 'train'
@@ -43,18 +41,18 @@ class ILSVRC2015(object):
     ids = list()
     for f in files:
       with open(f, 'r') as csvfile:
-        ids += [snippet_id for snippet_id, _ in csv.reader(csvfile, delimiter=' ')]
+        ids += [os.path.join(phase, snippet_id) for snippet_id, _ in csv.reader(csvfile, delimiter=' ')]
     return ids
 
 
 def main():
+  ROOT_DIR = os.path.join(os.path.expanduser('~'), 'ILSVRC2015')
   dataset = ILSVRC2015(root_dir=ROOT_DIR)
   ids = dataset.GetSnippetIDs(PHASE.TRAIN)
   i = 0
   from tqdm import tqdm
   for id in tqdm(ids):
-    parse_annotation_folder(os.path.join(dataset.annotations_dir, PHASE.TRAIN, id))
-
+    parse_annotation_folder(os.path.join(dataset.annotations_dir, id))
 
 
 if __name__ == '__main__':
