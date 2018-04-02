@@ -16,6 +16,22 @@ class AnnoStream(namedtuple('AnnoStream', ['meta', 'frames', 'bndboxes'])):
   def objcs2stream(meta: AnnoMeta, seq_of_objc: List[AnnoObj]):
     raise NotImplementedError
 
+  def __new__(cls, meta: AnnoMeta, objs: List[AnnoObj]):
+    frames = [o.frame for o in objs]
+    bndboxes = [o.bndbox for o in objs]
+    return super(AnnoStream, cls).__new__(cls, meta=meta, frames=frames, bndboxes=bndboxes)
+
+
+def fixed_length_slice_with_pad(x: List, s: int, l: int):
+  lx = len(x)  # length of list `x`
+  if s > lx:
+    raise ValueError('s({}) exceeds array length ({})'.format(s, lx))
+  e = s + l    # end
+  if e < 0:
+    raise ValueError('e({}) = s({}) + l({}) should be non-negative'.format(e, s, l))
+  (sp, s) = (-s, 0) if s < 0 else (0, s)
+  (ep, e) = (e - lx, lx) if e > lx else (0, e)
+  return [x[0] for _ in range(sp)] + x[slice(s, e)] + [x[-1] for _ in range(ep)]
 
 def parse_obj(elem: Element):
   """Parse from raw xml Element (tagged object) to `AnnoObjc`"""
@@ -76,7 +92,21 @@ class StreamSeperator(object):
 
 
 def main():
-  pass
+  x = list(range(10))
+  print(x)
+  try:
+    print(fixed_length_slice_with_pad(x, -20, 6))
+  except:
+    print('Left Error')
+  print(fixed_length_slice_with_pad(x, -2, 6))
+  print(fixed_length_slice_with_pad(x, 0, 6))
+  print(fixed_length_slice_with_pad(x, 2, 6))
+  print(fixed_length_slice_with_pad(x, -1, 12))
+  print(fixed_length_slice_with_pad(x, 6, 6))
+  try:
+    print(fixed_length_slice_with_pad(x, 12, 6))
+  except:
+    print('Right Error')
 
 
 if __name__ == '__main__':
