@@ -3,6 +3,9 @@ from collections import namedtuple
 from typing import List
 import os
 from utils.stream import StreamSeperator
+from utils.slice import fixed_length_slice_with_pad
+import tensorflow as tf
+from features import *
 
 
 class AnnoMeta(namedtuple('AnnoMeta', ['folder', 'filename', 'size'])):
@@ -13,21 +16,43 @@ class AnnoObj(namedtuple('AnnoObj', ['trackid', 'frame', 'name', 'bndbox', 'occl
   pass
 
 
-class AnnoStream(namedtuple('AnnoStream', ['meta', 'frames', 'bndboxes'])):
-  @staticmethod
-  def objcs2stream(meta: AnnoMeta, seq_of_objc: List[AnnoObj]):
-    raise NotImplementedError
-
+class AnnoStream(namedtuple('AnnoStream', ['meta', 'length', 'frames', 'bndboxes'])):
   def __new__(cls, meta: AnnoMeta, objs: List[AnnoObj]):
     frames = [o.frame for o in objs]
     bndboxes = [o.bndbox for o in objs]
-    return super(AnnoStream, cls).__new__(cls, meta=meta, frames=frames, bndboxes=bndboxes)
+    return super(AnnoStream, cls).__new__(cls, meta=meta, length=len(objs), frames=frames, bndboxes=bndboxes)
+
+  def substream(self, s: int, l: int):
+    """Extract a `l`-lengthed substream which starts at `s`, duplicated padding is performed"""
+    frames = fixed_length_slice_with_pad(self.frames, s, l)
+    bndboxes = fixed_length_slice_with_pad(self.bndboxes, s, l)
+    return super().__new__(type(self), meta=self.meta, length=l, frames=frames, bndboxes=bndboxes)
+
+  def splitIntoStreams(self, n: int, l: int):
+    """Split the whole AnnoStream into `n` same-lengthed substreams"""
+    _interval = max(self.length, 0) // n
+    ss = map(lambda x: _interval * x, range(0, n, 1))
+    return [self.substream(s=s, l=l) for s in ss]
+
+  def serializeToTFSequenceExample(self):
+    """Serialize AnnoStream object to TF.SequenceExample instance"""
+    return tf.train.SequenceExample(
+      context=tf.train.Features(feature={
+        'folder': feature_bytes(self.meta.folder),
+        'size': feature_int64(self.meta.size),
+        'length': feature_int64(self.length)
+      }),
+      feature_lists=tf.train.FeatureLists(feature_list={
+        'frames': feature_list_int64(self.frames),
+        'bndboxes': feature_list_int64(self.bndboxes)
+      })
+    )
 
 
 def parse_obj(elem: Element, frame: int):
   """Parse from raw xml Element (tagged object) to `AnnoObjc`"""
   return AnnoObj(trackid=bytes(elem[0].text, 'utf-8'),
-                 frame=int(frame),
+                 frame=[int(frame)],  # 1-D scalar feature, should be represented as a list
                  name=bytes(elem[1].text, 'utf-8'),
                  bndbox=[int(e.text) for e in elem[2][0:4]],
                  occluded=int(elem[3].text),
@@ -71,7 +96,11 @@ def parse_annotation_folder(folder: str):
 
 def main():
   FOLDER = '/home/zhouyz/ILSVRC2015/Annotations/VID/val/ILSVRC2015_val_00030000'
-  print(parse_annotation_folder(FOLDER))
+  streams = parse_annotation_folder(FOLDER)
+  stream = streams[0]
+  print(stream.length, stream.substream(0, 10))
+  print(stream.substream(0, 4).serializeToTFSequenceExample())#.SerializeToString())
+  print(stream.splitIntoStreams(2, 2))
 
 
 if __name__ == '__main__':
