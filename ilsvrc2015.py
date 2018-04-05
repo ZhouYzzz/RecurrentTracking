@@ -34,6 +34,10 @@ class ILSVRC2015(object):
   def devkit_dir(self):
     return os.path.join(self.root_dir, 'devkit')
 
+  @property
+  def tfrecords_dir(self):
+    return os.path.join(self.root_dir, 'tfrecords')
+
   def GetSnippetIDs(self, phase=PHASE.TRAIN):
     files = sorted(glob.glob(os.path.join(self.imagesets_dir, '{}*.txt'.format(phase))))
     if len(files) == 0:

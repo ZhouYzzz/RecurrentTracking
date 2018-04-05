@@ -27,6 +27,19 @@ def create_tfrecords(annotation_folder):
   return len(streams)
 
 
+def create_fixed_lengthed_tfrecords(annotation_folder, length=32):
+  writer = tf.python_io.TFRecordWriter(
+    path=tempfile.mktemp(suffix='.tfrecords', prefix=FLAGS.records_prefix, dir=FLAGS.output_dir))
+  streams = parse_annotation_folder(annotation_folder)
+  splitted_streams = []
+  for s in streams:
+    splitted_streams += s.splitIntoStreams(n=s.length//length + 1, l=length)
+  for s in splitted_streams:
+    writer.write(s.serializeToTFSequenceExample().SerializeToString())
+  writer.close()
+  return len(splitted_streams)
+
+
 def main():
   print('FLAGS:', FLAGS)
   dataset = ILSVRC2015(FLAGS.dataset_dir)
@@ -38,8 +51,10 @@ def main():
   #     total=len(snippet_ids)
   #   ))
   count = 0
-  for id in tqdm(snippet_ids, desc='Total TFRecords: {}'.format(count)):
-    count += create_tfrecords(os.path.join(dataset.annotations_dir, id))
+  t = tqdm(snippet_ids)
+  for id in t:
+    count += create_fixed_lengthed_tfrecords(os.path.join(dataset.annotations_dir, id))
+    t.set_description(desc='Total records {}'.format(count))
 
 
 if __name__ == '__main__':
