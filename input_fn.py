@@ -18,9 +18,20 @@ def preprocess(context, sequence_example, dataset_data_dir: str):
     # image_resized = image_decoded
     return image_resized
 
+  def _parse_bndbox(bndboxes_t, size_t):  # size_t: [width, height]
+    bndboxes_t = tf.cast(bndboxes_t, dtype=tf.float32)
+    size_t = tf.cast(size_t, dtype=tf.float32)
+    bndboxes_t = tf.div(bndboxes_t, [size_t[0], size_t[0], size_t[1], size_t[1]])
+    return bndboxes_t
+
   sequence_example['images'] = tf.map_fn(
     lambda frame: _parse_image(context['folder'], frame, context['size']),
     sequence_example['frames'],
+    dtype=tf.float32
+  )
+  sequence_example['bndboxes'] = tf.map_fn(
+    lambda bndboxes: _parse_bndbox(bndboxes, context['size']),
+    sequence_example['bndboxes'],
     dtype=tf.float32
   )
   return context, sequence_example

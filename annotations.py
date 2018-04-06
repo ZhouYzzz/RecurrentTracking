@@ -54,7 +54,7 @@ def parse_obj(elem: Element, frame: int):
   return AnnoObj(trackid=bytes(elem[0].text, 'utf-8'),
                  frame=[int(frame)],  # 1-D scalar feature, should be represented as a list
                  name=bytes(elem[1].text, 'utf-8'),
-                 bndbox=[int(e.text) for e in elem[2][0:4]],
+                 bndbox=[int(e.text) for e in elem[2][0:4]],  # xmax, xmin, ymax, ymin
                  occluded=int(elem[3].text),
                  generated=int(elem[4].text))
 
