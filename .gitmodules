@@ -1,0 +1,3 @@
+[submodule "tfrecords"]
+	path = tfrecords
+	url = https://github.com/ZhouYzzz/ILSVRC2015VID_TFRecords.git
